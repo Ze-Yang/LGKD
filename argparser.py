@@ -110,7 +110,7 @@ def get_argparser():
     parser.add_argument("--crop_size", type=int, default=512, help="crop size (default: 513)")
 
     parser.add_argument(
-        "--lr", type=float, nargs="+", default=[0.007], help="learning rate (default: 0.007)"
+        "--lr", type=float, default=0.01, help="learning rate (default: 0.01)"
     )
     parser.add_argument(
         "--lr_old", type=float, default=None, help="learning rate for old classes weights."
@@ -369,8 +369,7 @@ def get_argparser():
     parser.add_argument(
         "--step",
         type=int,
-        nargs="+",
-        default=[0],
+        default=0,
         help="The incremental step in execution (default: 0)"
     )
     parser.add_argument(

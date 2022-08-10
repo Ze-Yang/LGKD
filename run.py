@@ -1,4 +1,3 @@
-import copy
 import os
 import random
 
@@ -140,32 +139,16 @@ def main(opts):
     rank, world_size = dist.get_rank(), dist.get_world_size()
     torch.cuda.set_device(device_id)
 
-    if len(opts.lr) == 1 and len(opts.step) > 1:
-        opts.lr = opts.lr * len(opts.step)
-
     os.makedirs("results", exist_ok=True)
 
-    print(f"Learning for {len(opts.step)} with lrs={opts.lr}.")
-    all_val_scores = []
-    for i, (step, lr) in enumerate(zip(copy.deepcopy(opts.step), copy.deepcopy(opts.lr))):
-        if i > 0:
-            opts.step_ckpt = None
+    val_score = run_step(opts, world_size, rank, device)
 
-        opts.step = step
-        opts.lr = lr
-
-        val_score = run_step(opts, world_size, rank, device)
-        if rank == 0:
-            all_val_scores.append(val_score)
-
-        torch.cuda.empty_cache()
-
-        if rank == 0:
-            with open(f"results/{opts.date}_{opts.dataset}_{opts.task}_{opts.name}.csv", "a+") as f:
-                classes_iou = ','.join(
-                    [str(val_score['Class IoU'].get(c, 'x')) for c in range(opts.num_classes)]
-                )
-                f.write(f"{step},{classes_iou},{val_score['Mean IoU']}\n")
+    if rank == 0:
+        with open(f"results/{opts.date}_{opts.dataset}_{opts.task}_{opts.name}.csv", "a+") as f:
+            classes_iou = ','.join(
+                [str(val_score['Class IoU'].get(c, 'x')) for c in range(opts.num_classes)]
+            )
+            f.write(f"{opts.step},{classes_iou},{val_score['Mean IoU']}\n")
 
 
 def run_step(opts, world_size, rank, device):
@@ -538,10 +521,6 @@ def run_step(opts, world_size, rank, device):
     logger.add_scalar("T_MeanAcc", val_score['Mean Acc'], opts.step)
 
     logger.close()
-
-    del model
-    if model_old is not None:
-        del model_old
 
     return val_score
 
