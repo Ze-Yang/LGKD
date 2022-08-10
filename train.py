@@ -6,7 +6,7 @@ from functools import reduce
 import torch
 import torch.nn as nn
 from apex import amp
-from torch import distributed
+import torch.distributed as dist
 from torch.nn import functional as F
 
 from utils import get_regularizer
@@ -454,7 +454,7 @@ class Trainer:
 
             # xxx Regularizer (EWC, RW, PI)
             if self.regularizer_flag:
-                if distributed.get_rank() == 0:
+                if dist.get_rank() == 0:
                     self.regularizer.update()
                 l_reg = self.reg_importance * self.regularizer.penalty()
                 if l_reg != 0.:
@@ -491,12 +491,12 @@ class Trainer:
         epoch_loss = torch.tensor(epoch_loss).to(self.device)
         reg_loss = torch.tensor(reg_loss).to(self.device)
 
-        torch.distributed.reduce(epoch_loss, dst=0)
-        torch.distributed.reduce(reg_loss, dst=0)
+        dist.reduce(epoch_loss, dst=0)
+        dist.reduce(reg_loss, dst=0)
 
-        if distributed.get_rank() == 0:
-            epoch_loss = epoch_loss / distributed.get_world_size() / len(train_loader)
-            reg_loss = reg_loss / distributed.get_world_size() / len(train_loader)
+        if dist.get_rank() == 0:
+            epoch_loss = epoch_loss / dist.get_world_size() / len(train_loader)
+            reg_loss = reg_loss / dist.get_world_size() / len(train_loader)
 
         logger.info(f"Epoch {cur_epoch}, Class Loss={epoch_loss}, Reg Loss={reg_loss}")
 
@@ -674,12 +674,12 @@ class Trainer:
             class_loss = torch.tensor(class_loss).to(self.device)
             reg_loss = torch.tensor(reg_loss).to(self.device)
 
-            torch.distributed.reduce(class_loss, dst=0)
-            torch.distributed.reduce(reg_loss, dst=0)
+            dist.reduce(class_loss, dst=0)
+            dist.reduce(reg_loss, dst=0)
 
-            if distributed.get_rank() == 0:
-                class_loss = class_loss / distributed.get_world_size() / len(loader)
-                reg_loss = reg_loss / distributed.get_world_size() / len(loader)
+            if dist.get_rank() == 0:
+                class_loss = class_loss / dist.get_world_size() / len(loader)
+                reg_loss = reg_loss / dist.get_world_size() / len(loader)
 
             if logger is not None:
                 logger.info(

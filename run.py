@@ -6,7 +6,7 @@ import numpy as np
 import torch
 from apex import amp
 from apex.parallel import DistributedDataParallel
-from torch import distributed
+import torch.distributed as dist
 from torch.utils import data
 from torch.utils.data.distributed import DistributedSampler
 
@@ -135,9 +135,9 @@ def get_dataset(opts):
 
 
 def main(opts):
-    distributed.init_process_group(backend='nccl', init_method='env://')
+    dist.init_process_group(backend='nccl', init_method='env://')
     device_id, device = opts.local_rank, torch.device(opts.local_rank)
-    rank, world_size = distributed.get_rank(), distributed.get_world_size()
+    rank, world_size = dist.get_rank(), dist.get_world_size()
     torch.cuda.set_device(device_id)
 
     if len(opts.lr) == 1 and len(opts.step) > 1:
