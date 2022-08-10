@@ -78,13 +78,14 @@ class Logger:
     def error(self, msg):
         self.logger.error(msg)
 
-    def _transform_tag(self, tag):
+    def _transform_tag(self, tag, epoch=None):
         tag = tag + f"/{self.step}" if self.step is not None else tag
+        tag = tag + f"(epoch {epoch})" if epoch is not None else tag
         return tag
 
-    def add_results(self, results):
+    def add_results(self, results, epoch=None):
         if self.type == 'tensorboardX':
-            tag = self._transform_tag("Results")
+            tag = self._transform_tag("Results", epoch)
             text = "<table width=\"100%\">"
             for k, res in results.items():
                 text += f"<tr><td>{k}</td>" + " ".join([str(f'<td>{x}</td>') for x in res.values()]) + "</tr>"
