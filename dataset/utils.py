@@ -29,9 +29,9 @@ def filter_images(dataset, labels, labels_old=None, overlap=True):
     labels_cum = labels + labels_old + [0, 255]
 
     if overlap:
-        fil = lambda c: any(x in labels for x in cls)
+        fil = lambda c: any(x in labels for x in c)
     else:
-        fil = lambda c: any(x in labels for x in cls) and all(x in labels_cum for x in c)
+        fil = lambda c: any(x in labels for x in c) and all(x in labels_cum for x in c)
 
     for i in range(len(dataset)):
         cls = np.unique(np.array(dataset[i][1]))
