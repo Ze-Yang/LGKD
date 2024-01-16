@@ -445,3 +445,71 @@ class UnbiasedKnowledgeDistillationLoss(nn.Module):
             outputs = -loss
 
         return outputs
+
+
+class LabelGuidedKnowledgeDistillationLoss(nn.Module):
+    def __init__(self, reduction='mean', alpha=1., prev_kd=10, novel_kd=1):
+        super().__init__()
+        self.reduction = reduction
+        self.alpha = alpha
+        self.prev_kd = prev_kd
+        self.novel_kd = novel_kd
+        print("prev kd: {}\t novel kd: {}".format(self.prev_kd, self.novel_kd))
+
+    def forward(self, new_logits, old_logits, targets):
+        targets = targets.clone()
+        targets[targets < old_logits.shape[1]] = 0
+        new_logits = new_logits.permute(0, 2, 3, 1).reshape(-1, new_logits.shape[1])
+        old_logits = old_logits.permute(0, 2, 3, 1).reshape(-1, old_logits.shape[1])
+        targets = targets.view(-1)
+
+        ignore_mask = targets != 255
+        targets = targets[ignore_mask]
+        new_logits = new_logits[ignore_mask]
+        old_logits = old_logits[ignore_mask]
+
+        new_cl = new_logits.shape[1] - old_logits.shape[1]
+
+        old_logits = old_logits * self.alpha
+
+        novel_mask = targets >= old_logits.shape[1]
+        prev_mask = targets < old_logits.shape[1]
+
+        new_logits_novel = new_logits[novel_mask]
+        old_logits_novel = old_logits[novel_mask]
+
+        new_logits_prev = new_logits[prev_mask]
+        old_logits_prev = old_logits[prev_mask]
+
+        # kd loss for points belonging to the novel classes in the current step
+        old_prob_novel = torch.softmax(old_logits_novel, dim=1)
+        old_prob_novel = torch.cat([old_prob_novel,
+                                    old_prob_novel.new_zeros(old_prob_novel.shape[0], new_cl)], dim=1)
+        old_prob_novel[torch.arange(old_prob_novel.shape[0]), targets[novel_mask]] = old_prob_novel[:, 0]
+        old_prob_novel[:, 0] = 0
+        # old_prob_novel[torch.arange(old_prob_novel.shape[0]), targets[novel_mask]] = 1
+        # old_prob_novel[:, :-new_cl] = 0
+
+        den = torch.logsumexp(new_logits_novel, dim=1)
+        log_new_prob_novel = new_logits_novel - den.unsqueeze(dim=1)
+        loss_novel = (old_prob_novel * log_new_prob_novel).sum(dim=1)
+
+        # kd loss for points belonging to all the classes (including background) in the last step
+        old_prob_prev = torch.softmax(old_logits_prev, dim=1)
+        old_prob_prev = torch.cat([old_prob_prev,
+                                   old_prob_prev.new_zeros(old_prob_prev.shape[0], new_cl)], dim=1)
+
+        den = torch.logsumexp(new_logits_prev, dim=1)
+        log_new_prob_prev = new_logits_prev - den.unsqueeze(dim=1)
+        loss_prev = (old_prob_prev * log_new_prob_prev).sum(dim=1)
+
+        loss = torch.cat([self.prev_kd * loss_prev, self.novel_kd * loss_novel], dim=0)
+
+        if self.reduction == 'mean':
+            outputs = -torch.mean(loss)
+        elif self.reduction == 'sum':
+            outputs = -torch.sum(loss)
+        else:
+            outputs = -loss
+
+        return outputs

@@ -15,6 +15,7 @@ from utils.loss import (NCA, BCESigmoid, BCEWithLogitsLossWithIgnoreIndex,
                         FocalLossNew, IcarlLoss, KnowledgeDistillationLoss,
                         UnbiasedCrossEntropy,
                         UnbiasedKnowledgeDistillationLoss, UnbiasedNCA,
+                        LabelGuidedKnowledgeDistillationLoss,
                         soft_crossentropy)
 
 
@@ -85,8 +86,13 @@ class Trainer:
         self.kd_mask_adaptative_factor = opts.kd_mask_adaptative_factor
         self.lkd_flag = self.lkd > 0. and model_old is not None
         self.kd_need_labels = False
+        self.lgkd_flag = opts.lgkd
         if opts.unkd:
             self.lkd_loss = UnbiasedKnowledgeDistillationLoss(reduction="none", alpha=opts.alpha)
+        elif opts.lgkd:
+            self.lkd_loss = LabelGuidedKnowledgeDistillationLoss(alpha=opts.alpha,
+                                                                 prev_kd=opts.prev_kd,
+                                                                 novel_kd=opts.novel_kd)
         elif opts.kd_bce_sig:
             self.lkd_loss = BCESigmoid(reduction="none", alpha=opts.alpha, shape=opts.kd_bce_sig_shape)
         elif opts.exkd_gt and self.old_classes > 0 and self.step > 0:
@@ -364,44 +370,51 @@ class Trainer:
                 lde = self.lde * self.lde_loss(features['body'], features_old['body'])
 
             if self.lkd_flag:
-                # resize new output to remove new logits and keep only the old ones
-                if self.lkd_mask is not None and self.lkd_mask == "oldbackground":
-                    kd_mask = labels < self.old_classes
-                elif self.lkd_mask is not None and self.lkd_mask == "new":
-                    kd_mask = labels >= self.old_classes
+                if self.lgkd_flag:
+                    labels_small = F.interpolate(original_labels.unsqueeze(1).float(), scale_factor=1 / 16).long()
+                    lkd = self.lkd * self.lkd_loss(features["sem_logits_small"], features_old["sem_logits_small"], labels_small)
+                    # lkd = self.lkd * self.lkd_loss(outputs, outputs_old, original_labels)
                 else:
-                    kd_mask = None
-
-                if self.temperature_apply is not None:
-                    temp_mask = torch.ones_like(labels).to(outputs.device).to(outputs.dtype)
-
-                    if self.temperature_apply == "all":
-                        temp_mask = temp_mask / self.temperature
-                    elif self.temperature_apply == "old":
-                        mask_bg = labels < self.old_classes
-                        temp_mask[mask_bg] = temp_mask[mask_bg] / self.temperature
-                    elif self.temperature_apply == "new":
-                        mask_fg = labels >= self.old_classes
-                        temp_mask[mask_fg] = temp_mask[mask_fg] / self.temperature
-                    temp_mask = temp_mask[:, None]
-                else:
-                    temp_mask = 1.0
-
-                if self.kd_need_labels:
-                    lkd = self.lkd * self.lkd_loss(
-                        outputs * temp_mask, outputs_old * temp_mask, labels, mask=kd_mask
-                    )
-                else:
-                    lkd = self.lkd * self.lkd_loss(
-                        outputs * temp_mask, outputs_old * temp_mask, mask=kd_mask
-                    )
-
-                if self.kd_new:  # WTF?
-                    mask_bg = labels == 0
-                    lkd = lkd[mask_bg]
-
-                if kd_mask is not None and self.kd_mask_adaptative_factor:
-                    lkd = lkd.mean(dim=(1, 2)) * kd_mask.float().mean(dim=(1, 2))
+                    # resize new output to remove new logits and keep only the old ones
+                    lkd = self.lkd * self.lkd_loss(outputs, outputs_old)
+                # # resize new output to remove new logits and keep only the old ones
+                # if self.lkd_mask is not None and self.lkd_mask == "oldbackground":
+                #     kd_mask = labels < self.old_classes
+                # elif self.lkd_mask is not None and self.lkd_mask == "new":
+                #     kd_mask = labels >= self.old_classes
+                # else:
+                #     kd_mask = None
+                #
+                # if self.temperature_apply is not None:
+                #     temp_mask = torch.ones_like(labels).to(outputs.device).to(outputs.dtype)
+                #
+                #     if self.temperature_apply == "all":
+                #         temp_mask = temp_mask / self.temperature
+                #     elif self.temperature_apply == "old":
+                #         mask_bg = labels < self.old_classes
+                #         temp_mask[mask_bg] = temp_mask[mask_bg] / self.temperature
+                #     elif self.temperature_apply == "new":
+                #         mask_fg = labels >= self.old_classes
+                #         temp_mask[mask_fg] = temp_mask[mask_fg] / self.temperature
+                #     temp_mask = temp_mask[:, None]
+                # else:
+                #     temp_mask = 1.0
+                #
+                # if self.kd_need_labels:
+                #     lkd = self.lkd * self.lkd_loss(
+                #         outputs * temp_mask, outputs_old * temp_mask, labels, mask=kd_mask
+                #     )
+                # else:
+                #     lkd = self.lkd * self.lkd_loss(
+                #         outputs * temp_mask, outputs_old * temp_mask, mask=kd_mask
+                #     )
+                #
+                # if self.kd_new:  # WTF?
+                #     mask_bg = labels == 0
+                #     lkd = lkd[mask_bg]
+                #
+                # if kd_mask is not None and self.kd_mask_adaptative_factor:
+                #     lkd = lkd.mean(dim=(1, 2)) * kd_mask.float().mean(dim=(1, 2))
                 lkd = torch.mean(lkd)
 
             if self.pod is not None and self.step > 0:
@@ -419,7 +432,7 @@ class Trainer:
                     attentions_old,
                     attentions_new,
                     collapse_channels=self.pod,
-                    labels=labels,
+                    labels=original_labels,
                     index_new_class=self.old_classes,
                     pod_apply=self.pod_apply,
                     pod_deeplab_mask=self.pod_deeplab_mask,
@@ -648,7 +661,11 @@ class Trainer:
                     lde = self.lde_loss(features['body'], features_old['body'])
 
                 if self.lkd_flag and not self.kd_need_labels:
-                    lkd = self.lkd_loss(outputs, outputs_old).mean()
+                    if self.lgkd_flag:
+                        lkd = self.lkd_loss(outputs, outputs_old, labels)
+                    else:
+                        # resize new output to remove new logits and keep only the old ones
+                        lkd = self.lkd_loss(outputs, outputs_old).mean()
 
                 # xxx Regularizer (EWC, RW, PI)
                 if self.regularizer_flag:
@@ -820,7 +837,7 @@ def features_distillation(
             assert a.shape[2] == b.shape[2]
             assert a.shape[3] == b.shape[3]
 
-            assert handle_extra_channels in ("trim", "sum"), handle_extra_channels
+            assert handle_extra_channels in ("trim", "sum", "expand"), handle_extra_channels
 
             if handle_extra_channels == "sum":
                 _b = torch.zeros_like(a).to(a.dtype).to(a.device)
@@ -829,6 +846,24 @@ def features_distillation(
                 b = _b
             elif handle_extra_channels == "trim":
                 b = b[:, :index_new_class]
+            elif handle_extra_channels == "expand":
+                labels = labels.clone().unsqueeze(1)
+                a = F.softmax(a, dim=1)
+                b = F.softmax(b, dim=1)
+                labels_small = F.interpolate(labels.float(), scale_factor=1/16).long()
+                # labels_small_ori = labels_small.clone()
+                labels_small[labels_small == 255] = 0
+                _a = torch.zeros_like(b).to(b.dtype).to(b.device)
+                _a[:, 0:index_new_class] = a[:, 0:index_new_class]
+                index = labels_small
+                src = _a[:, 0][:, None]
+                _a.scatter_(1, index, src)
+                src[index >= index_new_class] = 0
+                a = _a
+
+                # ignore if label equals to 255
+                # a[labels_small_ori.expand_as(a) == 255] = float('nan')
+                # b[labels_small_ori.expand_as(b) == 255] = float('nan')
 
         # shape of (b, n, w, h)
         assert a.shape == b.shape, (a.shape, b.shape)

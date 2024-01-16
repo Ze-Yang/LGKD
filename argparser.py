@@ -55,6 +55,17 @@ def modify_command_options(opts):
             opts.threshold = 0.001
             opts.classif_adaptive_factor = True
             opts.init_balanced = True
+        if opts.method == 'LGKD':
+            opts.loss_kd = 1
+            opts.lgkd = True
+            opts.pod = "local"
+            opts.pod_factor = 0.001 if opts.dataset == 'ade' else 0.01
+            opts.pod_logits = True
+            opts.pod_options = {"switch": {"after": {"extra_channels": "sum", "factor": 0.00001 if opts.dataset == 'ade' else 0.0005, "type": "local"}}}
+            opts.pseudo = "entropy"
+            opts.threshold = 0.001
+            opts.classif_adaptive_factor = True
+            opts.init_balanced = True
 
     opts.no_overlap = not opts.overlap
     opts.no_cross_val = not opts.cross_val
@@ -68,7 +79,7 @@ def get_argparser():
     # Performance Options
     parser.add_argument("--local_rank", type=int, default=0)
     parser.add_argument("--random_seed", type=int, default=42, help="random seed (default: 42)")
-    parser.add_argument("--num_workers", type=int, default=1, help='number of workers (default: 1)')
+    parser.add_argument("--num_workers", type=int, default=4, help='number of workers (default: 1)')
 
     # Datset Options
     parser.add_argument("--data_root", type=str, default='data', help="path to Dataset")
@@ -90,7 +101,7 @@ def get_argparser():
         "--method",
         type=str,
         default=None,
-        choices=['FT', 'LWF', 'LWF-MC', 'ILT', 'EWC', 'RW', 'PI', 'MiB', 'PLOP'],
+        choices=['FT', 'LWF', 'LWF-MC', 'ILT', 'EWC', 'RW', 'PI', 'MiB', 'PLOP', 'LGKD'],
         help="The method you want to use. BE CAREFUL USING THIS, IT MAY OVERRIDE OTHER PARAMETERS."
     )
 
@@ -275,6 +286,8 @@ def get_argparser():
         help="Set this hyperparameter to a value greater than "
         "0 to enable Knowlesge Distillation (Soft-CrossEntropy)"
     )
+    parser.add_argument("--prev_kd", type=float, default=10.)
+    parser.add_argument("--novel_kd", type=float, default=2.)
 
     # Parameters for EWC, RW, and SI (from Riemannian Walks https://arxiv.org/abs/1801.10112)
     parser.add_argument(
