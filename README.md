@@ -1,118 +1,102 @@
 <div align="center">
 
-# PLOP: Learning without Forgetting for Continual Semantic Segmentation
+## LGKD: Label-Guided Knowledge Distillation for Continual Semantic Segmentation on 2D Images and 3D Point Clouds
 
-[![Paper](https://img.shields.io/badge/arXiv-2011.11390-brightgreen)](https://arxiv.org/abs/2011.11390)
-[![Conference](https://img.shields.io/badge/CVPR-2021-blue)](https://arxiv.org/abs/2011.11390)
-[![Youtube](https://img.shields.io/badge/Youtube-link-red)](https://youtu.be/GmnglAsraAM?t=2562)
-
+[![Conference](https://img.shields.io/badge/ICCV-2023-blue)](https://openaccess.thecvf.com/content/ICCV2023/papers/Yang_Label-Guided_Knowledge_Distillation_for_Continual_Semantic_Segmentation_on_2D_Images_ICCV_2023_paper.pdf)
+![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/label-guided-knowledge-distillation-for/continual-semantic-segmentation-on-pascal-voc)
+![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/label-guided-knowledge-distillation-for/continual-semantic-segmentation-on-ade20k)
+![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/label-guided-knowledge-distillation-for/continual-semantic-segmentation-on-scannet)
 </div>
 
+Existing knowledge distillation based continual semantic segmentation (CSS) methods continue to suffer from the confusion between the background and novel classes.
+To address this issue, we propose a new label-guided knowledge distillation (LGKD) loss for CSS, which builds a reliable **class correspondence** across incremental steps and alleviates the **novel-background confusion**.
+The figure below illustrates the distinction of our proposed LGKD loss from existing arts.
+<div align="center">
+  <img src="images/teaser.png" width="600">
+</div>
 
-![Vizualization on VOC 15-1](images/plop_viz.png)
-
-
-This repository contains all of our code. It is a modified version of
-[Cermelli et al.'s repository](https://github.com/fcdl94/MiB).
-
-
+This repository contains the official implementation for [LGKD](https://openaccess.thecvf.com/content/ICCV2023/papers/Yang_Label-Guided_Knowledge_Distillation_for_Continual_Semantic_Segmentation_on_2D_Images_ICCV_2023_paper.pdf), built upon [Douillard et al.'s repository](https://github.com/arthurdouillard/CVPR2021_PLOP).
+If you find it useful, please consider to cite our paper:
 ```
-@inproceedings{douillard2021plop,
-  title={PLOP: Learning without Forgetting for Continual Semantic Segmentation},
-  authors={Douillard, Arthur and Chen, Yifu and Dapogny, Arnaud and Cord, Matthieu},
-  booktitle={Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition (CVPR)},
-  year={2021}
+@inproceedings{yang2023label,
+  title={Label-guided knowledge distillation for continual semantic segmentation on 2d images and 3d point clouds},
+  author={Yang, Ze and Li, Ruibo and Ling, Evan and Zhang, Chi and Wang, Yiming and Huang, Dezhao and Ma, Keng Teck and Hur, Minhoe and Lin, Guosheng},
+  booktitle={Proceedings of the IEEE/CVF International Conference on Computer Vision},
+  pages={18601--18612},
+  year={2023}
 }
 ```
 
-# Requirements
+## Installation
 
-You need to install the following libraries:
-- Python (3.6)
-- Pytorch (1.8.1+cu102)
-- torchvision (0.9.1+cu102)
-- tensorboardX (1.8)
+This repo is tested with the following environment (see [environment.yml](environment.yml) for details) on 2x RTX 3090, though it may also work with other versions.
+- Python (3.8.12)
+- Pytorch (1.10.2+cu11.3.1)
 - apex (0.1)
-- matplotlib (3.3.1)
-- numpy (1.17.2)
-- [inplace-abn](https://github.com/mapillary/inplace_abn) (1.0.7)
+- [inplace-abn](https://github.com/mapillary/inplace_abn) (1.1.0)
 
-Note also that apex seems to only work with some CUDA versions, therefore try to install Pytorch (and torchvision) with
-the 10.2 CUDA version. You'll probably need anaconda instead of pip in that case, sorry! Do:
-
+Readily setup with the following command lines. Do remember to check your own cuda version.
 ```
-conda install -y pytorch torchvision cudatoolkit=10.2 -c pytorch
+# pytorch installation
+conda install pytorch torchvision pytorch-cuda=12.1 -c pytorch -c nvidia
+
+# other required packages
+pip install matplotlib inplace_abn tensorboardX tensorboard termcolor
+
+# apex installation
+git clone https://github.com/NVIDIA/apex
 cd apex
-pip3 install -v --no-cache-dir --global-option="--cpp_ext" --global-option="--cuda_ext" ./
+# if pip >= 23.1 (ref: https://pip.pypa.io/en/stable/news/#v23-1) which supports multiple `--config-settings` with the same key... 
+pip install -v --disable-pip-version-check --no-cache-dir --no-build-isolation --config-settings "--build-option=--cpp_ext" --config-settings "--build-option=--cuda_ext" ./
+# otherwise
+pip install -v --disable-pip-version-check --no-cache-dir --no-build-isolation --global-option="--cpp_ext" --global-option="--cuda_ext" ./
 ```
 
-Note that while the code should be runnable without mixed precision (apex), some have reported lower perfs without it. So try with it!
+## Dataset
 
-# Dataset
+Download ADE20k and Pascal-VOC 2012 with the scripts in the `data` folder.
+Feel free to create a symbolic link instead if you already have a local copy of the standard PASCAL-VOC benchmark.
 
-Two scripts are available to download ADE20k and Pascal-VOC 2012, please see in the `data` folder.
-For Cityscapes, you need to do it yourself, because you have to ask "permission" to the holders; but be
-reassured, it's only a formality, you can get the link in a few days by mail.
+**Expected dataset structure for PASCAL VOC 2012:**
 
-![Performance on VOC](images/plop_voc.png)
+    PascalVOC2012
+    ├── VOCdevkit               # standard Pascal VOC benchmark
+    │   ├── (VOC2007)           # optional, will not be downloaded by the script
+    │   │   ├── ImageSets
+    │   │   └── ...
+    │   └── VOC2012
+    │       ├── ImageSets
+    │       └── ...
+    ├── SegmentationClassAug
+    ├── SegmentationClassAug_Visualization
+    └── list
+**Expected dataset structure for ADE20k:**
 
+    ADEChallengeData2016          # standard ADE20k benchmark
+    ├── annotations
+    ├── images
+    ├── objectInfo150.txt
+    └── sceneCategories.txt
 
-# How to perform training
-The most important file is run.py, that is in charge to start the training or test procedure.
-To run it, simpy use the following command:
+## Getting Started
 
-> python -m torch.distributed.launch --nproc_per_node=\<num_GPUs\> run.py --data_root \<data_folder\> --name \<exp_name\> .. other args ..
+We used the pretrained model released by the authors of [In-place ABN](https://github.com/mapillary/inplace_abn#training-on-imagenet-1k).
+Create a directory named `./pretrained` and download the [weights](https://github.com/Ze-Yang/LGKD/releases/download/v1.0/resnet101_iabn_sync.pth.tar) of ResNet pretrained on ImageNet.
 
-The default is to use a pretraining for the backbone used, that is searched in the pretrained folder of the project.
-We used the pretrained model released by the authors of In-place ABN (as said in the paper), that can be found here:
- [link](https://github.com/mapillary/inplace_abn#training-on-imagenet-1k). I've also upload those weights there: [link](https://github.com/arthurdouillard/CVPR2021_PLOP/releases/download/v1.0/resnet101_iabn_sync.pth.tar).
+### Train & Evaluation with script
 
-Since the pretrained are made on multiple-gpus, they contain a prefix "module." in each key of the network. Please, be sure to remove them to be compatible with this code (simply rename them using key = key\[7:\]) (if you're working on single gpu).
-If you don't want to use pretrained, please use --no-pretrained.
+To reproduce our results, simply run the corresponding script (VOC 15-1 for example):
+```
+bash scripts/voc/lgkd_15-1.sh
+```
 
-There are many options (you can see them all by using --help option), but we arranged the code to being straightforward to test the reported methods.
-Leaving all the default parameters, you can replicate the experiments by setting the following options.
-- please specify the data folder using: --data_root \<data_root\>
-- dataset: --dataset voc (Pascal-VOC 2012) | ade (ADE20K)
-- task: --task \<task\>, where tasks are
-    - 15-5, 15-5s, 19-1 (VOC), 100-50, 100-10, 50, 100-50b, 100-10b, 50b (ADE, b indicates the order)
-- step (each step is run separately): --step \<N\>, where N is the step number, starting from 0
-- (only for Pascal-VOC) disjoint is default setup, to enable overlapped: --overlapped
-- learning rate: --lr 0.01 (for step 0) | 0.001 (for step > 0)
-- batch size: --batch_size \<24/num_GPUs\>
-- epochs: --epochs 30 (Pascal-VOC 2012) | 60 (ADE20K)
-- method: --method \<method name\>, where names are
-    - FT, LWF, LWF-MC, ILT, EWC, RW, PI, MIB
+- Note that you will need to specify your own data path.
+- By default, we use 2 GPUs. Change the batch size accordingly if you use different number of GPUs.
+For instance, double the batch size if you train on a single GPU.
 
-For all details please follow the information provided using the help option.
+### Evaluation in command line
 
-#### Example commands
-
-LwF on the 100-50 setting of ADE20K, step 0:
-> python -m torch.distributed.launch --nproc_per_node=2 run.py --data_root data --batch_size 12 --dataset ade --name LWF --task 100-50 --step 0 --lr 0.01 --epochs 60 --method LWF
-
-MIB on the 50b setting of ADE20K, step 2:
-> python -m torch.distributed.launch --nproc_per_node=2 run.py --data_root data --batch_size 12 --dataset ade --name MIB --task 100-50 --step 2 --lr 0.001 --epochs 60 --method MIB
-
-LWF-MC on 15-5 disjoint setting of VOC, step 1:
-> python -m torch.distributed.launch --nproc_per_node=2 run.py --data_root data --batch_size 12 --dataset voc --name LWF-MC --task 15-5 --step 1 --lr 0.001 --epochs 30 --method LWF-MC
-
-PLOP on 15-1 overlapped setting of VOC, step 1:
-> python -m torch.distributed.launch --nproc_per_node=2 run.py --data_root data --batch_size 12 --dataset voc --name PLOP --task 15-5s --overlapped --step 1 --lr 0.001 --epochs 30 --method FT --pod local --pod_factor 0.01 --pod_logits --pseudo entropy --threshold 0.001 --classif_adaptive_factor --init_balanced --pod_options "{\"switch\": {\"after\": {\"extra_channels\": \"sum\", \"factor\": 0.0005, \"type\": \"local\"}}}"
-
-
-Once you trained the model, you can see the result on tensorboard (we perform the test after the whole training)
- or you can test it by using the same script and parameters but using the command
-> --test
-
-that will skip all the training procedure and test the model on test data.
-
-Or more simply you can use one of the provided script that will launch every step of a continual training.
-
-For example, do
-
-````
-bash scripts/voc/plop_15-1.sh
-````
-
-Note that you will need to modify those scripts to include the path where your data.
+To evaluate the trained models, run
+```
+torchrun --master_port free_port --nproc_per_node=1 run.py --data_root path/to/data --overlap --batch_size 12 --dataset voc --name LGKD --task 15-5s --step 5 --method LGKD --opt_level O1 --ckpt model_to_test.pth --test
+```
