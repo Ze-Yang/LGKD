@@ -62,7 +62,6 @@ dependencies:
   - zstd=1.4.9=haebb681_0
   - pip:
     - absl-py==1.0.0
-    - apex==0.1
     - backports-shutil-get-terminal-size==1.0.0
     - cachetools==5.0.0
     - charset-normalizer==2.0.12
