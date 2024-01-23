@@ -201,7 +201,7 @@ def get_argparser():
         "--print_interval", type=int, default=10, help="print interval of loss (default: 10)"
     )
     parser.add_argument(
-        "--val_interval", type=int, default=1, help="epoch interval for eval (default: 1)"
+        "--val_interval", type=int, default=60, help="epoch interval for eval (default: 1)"
     )
     parser.add_argument(
         "--ckpt_interval", type=int, default=1, help="epoch interval for saving model (default: 1)"
@@ -359,6 +359,12 @@ def get_argparser():
         help="Enable Unbiased Knowledge Distillation instead of Knowledge Distillation"
     )
     parser.add_argument(
+        "--lgkd",
+        default=False,
+        action='store_true',
+        help="Enable Label-guided Knowledge Distillation instead of Knowledge Distillation"
+    )
+    parser.add_argument(
         "--alpha",
         default=1.,
         type=float,
@@ -434,8 +440,6 @@ def get_argparser():
     parser.add_argument("--pseudo_soft", default=None, type=str, choices=["soft_certain", "soft_uncertain"])
     parser.add_argument("--pseudo_soft_factor", default=1.0, type=float)
     parser.add_argument("--pseudo_ablation", default=None, choices=["corrected_errors", "removed_errors"])
-
-
     parser.add_argument("--kd_new", default=False, action="store_true", help="Apply KD only on new")
 
     parser.add_argument(
@@ -524,7 +528,6 @@ def get_argparser():
 
     parser.add_argument("--exkd_gt", action="store_true", default=False)
     parser.add_argument("--exkd_sum", action="store_true", default=False)
-
 
     parser.add_argument("--focal_loss", action="store_true", default=False)
     parser.add_argument("--focal_loss_new", action="store_true", default=False)
