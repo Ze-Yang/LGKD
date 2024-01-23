@@ -11,13 +11,13 @@ GPU=0,1
 NB_GPU=2
 
 
-DATA_ROOT=/path/to/my/pascalvoc
+DATA_ROOT=path/to/data_root  # Should contain subdirectory PascalVOC2012
 
 DATASET=voc
 TASK=15-5s
 NAME=MiB
 METHOD=MiB
-OPTIONS="--checkpoint checkpoints/step/"
+OPTIONS="--checkpoint checkpoints/step"
 
 SCREENNAME="${DATASET}_${TASK}_${NAME} On GPUs ${GPU}"
 
