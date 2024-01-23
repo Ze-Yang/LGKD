@@ -14,9 +14,9 @@ NB_GPU=2
 DATA_ROOT=path/to/data_root  # Should contain subdirectory ADEChallengeData2016
 
 DATASET=ade
-TASK=100-50
-NAME=PLOP
-METHOD=PLOP
+TASK=50
+NAME=LGKD
+METHOD=LGKD
 OPTIONS="--checkpoint checkpoints/step"
 
 SCREENNAME="${DATASET}_${TASK}_${NAME} On GPUs ${GPU}"
@@ -41,9 +41,12 @@ INITIAL_BATCH_SIZE=6
 BATCH_SIZE=6
 INITIAL_EPOCHS=60
 EPOCHS=60
+PREV_KD=2
+NOVEL_KD=10
 
 CUDA_VISIBLE_DEVICES=${GPU} python3 -m torch.distributed.launch --master_port ${PORT} --nproc_per_node=${NB_GPU} run.py --date ${START_DATE} --data_root ${DATA_ROOT} --overlap --batch_size ${INITIAL_BATCH_SIZE} --dataset ${DATASET} --name ${NAME} --task ${TASK} --step 0 --lr 0.02 --epochs ${INITIAL_EPOCHS} --method ${METHOD} --opt_level O1 ${OPTIONS}
-CUDA_VISIBLE_DEVICES=${GPU} python3 -m torch.distributed.launch --master_port ${PORT} --nproc_per_node=${NB_GPU} run.py --date ${START_DATE} --data_root ${DATA_ROOT} --overlap --batch_size ${BATCH_SIZE} --dataset ${DATASET} --name ${NAME} --task ${TASK} --step 1 --lr 0.002 --epochs ${EPOCHS} --method ${METHOD} --opt_level O1 ${OPTIONS}
+CUDA_VISIBLE_DEVICES=${GPU} python3 -m torch.distributed.launch --master_port ${PORT} --nproc_per_node=${NB_GPU} run.py --date ${START_DATE} --data_root ${DATA_ROOT} --overlap --batch_size ${BATCH_SIZE} --dataset ${DATASET} --name ${NAME} --task ${TASK} --step 1 --lr 0.002 --epochs ${EPOCHS} --method ${METHOD} --opt_level O1 ${OPTIONS} --prev_kd ${PREV_KD} --novel_kd ${NOVEL_KD}
+CUDA_VISIBLE_DEVICES=${GPU} python3 -m torch.distributed.launch --master_port ${PORT} --nproc_per_node=${NB_GPU} run.py --date ${START_DATE} --data_root ${DATA_ROOT} --overlap --batch_size ${BATCH_SIZE} --dataset ${DATASET} --name ${NAME} --task ${TASK} --step 2 --lr 0.002 --epochs ${EPOCHS} --method ${METHOD} --opt_level O1 ${OPTIONS} --prev_kd ${PREV_KD} --novel_kd ${NOVEL_KD}
 python3 average_csv.py ${RESULTSFILE}
 
 echo ${SCREENNAME}
