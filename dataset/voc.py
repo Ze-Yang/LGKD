@@ -53,7 +53,8 @@ class VOCSegmentation(data.Dataset):
         self.transform = transform
 
         self.image_set = image_set
-        voc_root = self.root
+        base_dir = "PascalVOC2012"
+        voc_root = os.path.join(self.root, base_dir)
         splits_dir = os.path.join(voc_root, 'list')
 
         if not os.path.isdir(voc_root):
