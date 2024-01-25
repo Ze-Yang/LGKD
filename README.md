@@ -100,3 +100,8 @@ To evaluate the trained models, run
 ```
 torchrun --master_port free_port --nproc_per_node=1 run.py --data_root path/to/data --overlap --batch_size 12 --dataset voc --name LGKD --task 15-5s --step 5 --method LGKD --opt_level O1 --ckpt model_to_test.pth --test
 ```
+
+## License
+This repository is released under [CC BY-NC 4.0 License](LICENSE). The codes are for educational and non-commercial research purpose only.
+ 
+The copyright belongs to Nanyang Technological University & Hyundai Motor Company.
