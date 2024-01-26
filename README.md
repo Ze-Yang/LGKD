@@ -17,7 +17,7 @@ The figure below illustrates the distinction of our proposed LGKD loss from exis
 
 This repository contains the official implementation for [LGKD](https://openaccess.thecvf.com/content/ICCV2023/papers/Yang_Label-Guided_Knowledge_Distillation_for_Continual_Semantic_Segmentation_on_2D_Images_ICCV_2023_paper.pdf), built upon [Douillard et al.'s repository](https://github.com/arthurdouillard/CVPR2021_PLOP).
 If you find it useful, please consider to cite our paper:
-```
+```BibTeX
 @inproceedings{yang2023label,
   title={Label-guided knowledge distillation for continual semantic segmentation on 2d images and 3d point clouds},
   author={Yang, Ze and Li, Ruibo and Ling, Evan and Zhang, Chi and Wang, Yiming and Huang, Dezhao and Ma, Keng Teck and Hur, Minhoe and Lin, Guosheng},
@@ -36,7 +36,7 @@ This repo is tested with the following environment (see [environment.yml](enviro
 - [inplace-abn](https://github.com/mapillary/inplace_abn) (1.1.0)
 
 Readily setup with the following command lines. Do remember to check your own cuda version.
-```
+```bash
 # pytorch installation
 conda install pytorch torchvision pytorch-cuda=12.1 -c pytorch -c nvidia
 
@@ -86,7 +86,7 @@ Create a directory named `./pretrained` and download the [weights](https://githu
 ### Train & Evaluation with script
 
 To reproduce our results, simply run the corresponding script (VOC 15-1 for example):
-```
+```bash
 bash scripts/voc/lgkd_15-1.sh
 ```
 
@@ -97,9 +97,21 @@ For instance, double the batch size if you train on a single GPU.
 ### Evaluation in command line
 
 To evaluate the trained models, run
-```
+```bash
 torchrun --master_port free_port --nproc_per_node=1 run.py --data_root path/to/data --overlap --batch_size 12 --dataset voc --name LGKD --task 15-5s --step 5 --method LGKD --opt_level O1 --ckpt model_to_test.pth --test
 ```
+
+### Pretrained Models
+We provide a set of pre-trained models for download so that one can choose to skip the long training phase of step 0.
+
+| Dataset | Setting | background | old | all | Download |
+|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|
+| VOC | 19-1 | 94.0 | 77.3 | 78.2 | [19-1-voc.pth](https://github.com/Ze-Yang/LGKD/releases/download/v1.0/19-1-voc.pth) |
+| VOC | 15-5 | 94.5 | 79.8 | 80.8 | [15-x-voc.pth](https://github.com/Ze-Yang/LGKD/releases/download/v1.0/15-x-voc.pth) |
+| VOC | 15-1 | 94.5 | 79.8 | 80.8 | [15-x-voc.pth](https://github.com/Ze-Yang/LGKD/releases/download/v1.0/15-x-voc.pth) |
+| ADE20k | 100-50 | 35.4 | 42.9 | 42.8 | [100-50-ade.pth](https://github.com/Ze-Yang/LGKD/releases/download/v1.0/100-50-ade.pth) |
+| ADE20k | 100-10 | 36.5 | 42.8 | 42.7 | [100-10-ade.pth](https://github.com/Ze-Yang/LGKD/releases/download/v1.0/100-10-ade.pth) |
+| ADE20k | 50-50 | 44.9 | 49.4 | 49.3 | [50-ade.pth](https://github.com/Ze-Yang/LGKD/releases/download/v1.0/50-ade.pth) |
 
 ## License
 This repository is released under [CC BY-NC 4.0 License](LICENSE). The codes are for educational and non-commercial research purpose only.
