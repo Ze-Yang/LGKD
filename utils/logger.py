@@ -1,3 +1,4 @@
+import functools
 import logging
 import os
 import sys
@@ -92,24 +93,21 @@ class Logger:
             text += "</table>"
             self.writer.add_text(tag, text)
 
-    def setup_logger(self, output=None, distributed_rank=0, color=True, name="PLOP", abbrev_name=None):
+    @functools.lru_cache()  # so that calling setup_logger multiple times won't add many handlers
+    def setup_logger(self, output=None, distributed_rank=0, color=True, name="LGKD", abbrev_name=None):
         """
         Args:
             output (str): a file name or a directory to save log. If None, will not save log file.
                 If ends with ".txt" or ".log", assumed to be a file name.
                 Otherwise, logs will be saved to `output/log.txt`.
             name (str): the root module name of this logger
-            abbrev_name (str): an abbreviation of the module, to avoid long names in logs.
-                Set to "" to not log the root module in logs.
-                By default, will abbreviate "detectron2" to "d2" and leave other
-                modules unchanged.
         """
         logger = logging.getLogger(name)
         logger.setLevel(logging.DEBUG)
         logger.propagate = False
 
         if abbrev_name is None:
-            abbrev_name = "plop" if name == "PLOP" else name
+            abbrev_name = name
 
         plain_formatter = logging.Formatter(
             "[%(asctime)s] %(name)s %(levelname)s: %(message)s", datefmt="%m/%d %H:%M:%S"
@@ -170,5 +168,6 @@ class _ColorfulFormatter(logging.Formatter):
 
 # cache the opened file object, so that different calls to `setup_logger`
 # with the same file name can safely write to the same file.
+@functools.lru_cache(maxsize=None)
 def _cached_log_stream(filename):
     return open(filename, "a")

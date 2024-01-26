@@ -87,30 +87,31 @@ class Trainer:
         self.lkd_flag = self.lkd > 0. and model_old is not None
         self.kd_need_labels = False
         self.lgkd_flag = opts.lgkd
-        if opts.unkd:
-            self.lkd_loss = UnbiasedKnowledgeDistillationLoss(reduction="none", alpha=opts.alpha)
-        elif opts.lgkd:
-            self.lkd_loss = LabelGuidedKnowledgeDistillationLoss(alpha=opts.alpha,
-                                                                 prev_kd=opts.prev_kd,
-                                                                 novel_kd=opts.novel_kd)
-        elif opts.kd_bce_sig:
-            self.lkd_loss = BCESigmoid(reduction="none", alpha=opts.alpha, shape=opts.kd_bce_sig_shape)
-        elif opts.exkd_gt and self.old_classes > 0 and self.step > 0:
-            self.lkd_loss = ExcludedKnowledgeDistillationLoss(
-                reduction='none', index_new=self.old_classes, new_reduction="gt",
-                initial_nb_classes=opts.inital_nb_classes,
-                temperature_semiold=opts.temperature_semiold
-            )
-            self.kd_need_labels = True
-        elif opts.exkd_sum and self.old_classes > 0 and self.step > 0:
-            self.lkd_loss = ExcludedKnowledgeDistillationLoss(
-                reduction='none', index_new=self.old_classes, new_reduction="sum",
-                initial_nb_classes=opts.inital_nb_classes,
-                temperature_semiold=opts.temperature_semiold
-            )
-            self.kd_need_labels = True
-        else:
-            self.lkd_loss = KnowledgeDistillationLoss(alpha=opts.alpha)
+        if self.step > 0:
+            if opts.unkd:
+                self.lkd_loss = UnbiasedKnowledgeDistillationLoss(reduction="none", alpha=opts.alpha)
+            elif opts.lgkd:
+                self.lkd_loss = LabelGuidedKnowledgeDistillationLoss(alpha=opts.alpha,
+                                                                     prev_kd=opts.prev_kd,
+                                                                     novel_kd=opts.novel_kd)
+            elif opts.kd_bce_sig:
+                self.lkd_loss = BCESigmoid(reduction="none", alpha=opts.alpha, shape=opts.kd_bce_sig_shape)
+            elif opts.exkd_gt and self.old_classes > 0:
+                self.lkd_loss = ExcludedKnowledgeDistillationLoss(
+                    reduction='none', index_new=self.old_classes, new_reduction="gt",
+                    initial_nb_classes=opts.inital_nb_classes,
+                    temperature_semiold=opts.temperature_semiold
+                )
+                self.kd_need_labels = True
+            elif opts.exkd_sum and self.old_classes > 0:
+                self.lkd_loss = ExcludedKnowledgeDistillationLoss(
+                    reduction='none', index_new=self.old_classes, new_reduction="sum",
+                    initial_nb_classes=opts.inital_nb_classes,
+                    temperature_semiold=opts.temperature_semiold
+                )
+                self.kd_need_labels = True
+            else:
+                self.lkd_loss = KnowledgeDistillationLoss(alpha=opts.alpha)
 
         # ICARL
         self.icarl_combined = False

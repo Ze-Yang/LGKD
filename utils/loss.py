@@ -1,6 +1,9 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import logging
+
+logger = logging.getLogger('LGKD.' + __name__)
 
 
 def get_loss(loss_type):
@@ -454,7 +457,7 @@ class LabelGuidedKnowledgeDistillationLoss(nn.Module):
         self.alpha = alpha
         self.prev_kd = prev_kd
         self.novel_kd = novel_kd
-        print("prev kd: {}\t novel kd: {}".format(self.prev_kd, self.novel_kd))
+        logger.info("prev kd: {}\t novel kd: {}".format(self.prev_kd, self.novel_kd))
 
     def forward(self, new_logits, old_logits, targets):
         targets = targets.clone()
