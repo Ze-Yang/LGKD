@@ -135,7 +135,7 @@ def get_dataset(opts):
 
 def main(opts):
     dist.init_process_group(backend='nccl', init_method='env://')
-    device_id, device = opts.local_rank, torch.device(opts.local_rank)
+    device_id, device = int(os.environ['LOCAL_RANK']), torch.device(int(os.environ['LOCAL_RANK']))
     rank, world_size = dist.get_rank(), dist.get_world_size()
     torch.cuda.set_device(device_id)
 
