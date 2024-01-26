@@ -37,7 +37,7 @@ echo "Writing in ${RESULTSFILE}"
 # And for the second step, this option:
 # --step_ckpt ${FIRSTMODEL}
 
-INITIAL_BATCH_SIZE=8
+INITIAL_BATCH_SIZE=12
 BATCH_SIZE=12
 INITIAL_EPOCHS=30
 EPOCHS=30
